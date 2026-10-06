@@ -1,0 +1,148 @@
+---
+title: "Chicago Public Schools and Demographic Executive Summary"
+subtitle: |
+  | Final Project 
+  | Data Science 1 with R (STAT 301-1)
+author: "Sarah Villamil"
+pagetitle: "Executive Summary  Sarah Villamil"
+date: "12/10/2025"
+
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    embed-resources: true
+    link-external-newwindow: true
+
+execute:
+  warning: false
+
+from: markdown+emoji
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+
+## Github Repo Link
+
+[My Git Hub Link](https://github.com/stat301-1-2025-fall/final-project-1-sarahvillamil)
+
+:::
+```{r}
+#| label: load-data
+#| results: hide
+#| echo: FALSE
+
+# libraries
+library(tidyverse)
+library(here)
+library(naniar)
+
+
+# datasets
+cps_untidy <- read_csv(here("data/raw/Chicago_public_schools.csv"))
+chicago_community_data <- read_csv(here("data/raw/Chicago_Demographic_data.csv")) 
+zip_joined <- read_rds(here("data/cps_and_demographic_cleaned.rds"))
+```
+
+## Introduction and Purpose
+[Chicago Public Schools Data](https://data.cityofchicago.org/Education/Chicago-Public-Schools-School-Progress-Reports-SY2/twrw-chuq/about_data).
+This data set is a 2024 school progress report ratings for all Chicago Public Schools, based on 2022-2023 data. For further analysis, I joined this dataset with the 
+[Chicago Demographic Data](https://data.cityofchicago.org/Community-Economic-Development/ACS-5-Year-Data-by-Community-Area/t68z-cikk/data_preview). 
+Both of these datasets were first accessed in October 24, 2025.
+
+When these datasets were joined the new dataset which is used for this report had 39 columns with 1298 observations. Of these, 17 were categorical variables and 22 were numeric variables.
+
+  The purpose for this analysis is to further discover how of public education can positively impact a student's life post high school. The comparison of performance metrics such as SAT scores and graduation rates show how different school types impact a student's education. I have always been interested in finding achievable ways to reduce barriers across schools.
+  
+Research Question 1: What variables could schools target to improve college enrollment rates? 
+
+Research Question 2: How can a school type affect a student's post-high school outcomes? 
+  
+## Major Results 
+
+### College Enrollment Rates
+ If a school wants to improve college enrollments percents, they can focus on tackling student attendance. Student attendance is a manageable and achievable variable for schools to target that could show impactful results on a student's graduation rate and college enrollment rate. If a student continues to attend school on a regular basis, then they are more likely to graduate and to attend college. If a school wishes to increase their attendance among students they could further compartmentalize it to first decrease the percent of chronic truancy among students. 
+  
+```{r}
+#| label: fig-attendance-by-type
+#| fig-cap: "Student Attendance by type Graph"
+#| echo: FALSE
+attendance_by_type_graph <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  ggplot(aes(x = student_attendance, y = college_enrollment_school_pct, color = school_type)) +
+  geom_point() +
+  labs(
+    title = "Relation of College Enrollment to Student Attendance", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "Student Attendance", 
+    y = "College Enrollment", 
+    color = "School Type"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/attendance_by_type_graph.png", attendance_by_type_graph)
+attendance_by_type_graph
+```
+
+### School Type
+The type of school does impact the college enrollment rates as shown in @fig-enrollment-by-school-cps. There was a common pattern of selective enrollment schools having best performanc metrics while citywide options had the lowest. 
+
+```{r}
+#| label: fig-enrollment-by-school-cps
+#| fig-cap: College Enrollment Percents by School Type for Chicago Public High Schools"
+#| echo: FALSE
+
+college_enrollment_by_school_type <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  summarize(avg_college_enrollment = mean(college_enrollment_school_pct, na.rm = TRUE), .by = school_type) |> 
+  arrange(desc(avg_college_enrollment)) |>
+ggplot(aes(x = school_type, y = avg_college_enrollment)) +
+ geom_col(fill = "darkcyan", color = "darkslategray") + 
+  labs(
+    title = "Average Percent of College Enrollment by School Type", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "School Type", 
+    y = "Average Percent of College Enrollment"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/college_enrollment_by_school_type.png", college_enrollment_by_school_type)
+
+college_enrollment_by_school_type
+```
+  
+There could be a further connection drawn between the income levels of the neighborhood in which selective enrollment schools preside. Even though, selective enrollments schools are accepted based on application, proximity makes selective enrollment schools more accessible to higher income families. 
+  
+```{r}
+#| label: tbl-top-enrollment-by-top-income-level-cps
+#| tbl-cap: "Chicago Public Schools School Type in Order of Highest College Enrollment Rate"
+#| echo: FALSE
+college_enrollment_top <- zip_joined |> 
+  drop_na() |> 
+  filter(primary_category == "HS", year == "2023") |>
+  arrange(desc(college_enrollment_school_pct)) |> 
+  select(short_name, income_level, college_enrollment_school_pct) |>
+  slice_head(n = 10)
+
+knitr::kable(college_enrollment_top, caption = "Chicago Public Schools School Type in Order of Highest College Enrollment Rate")
+```
+
+## Conclusions
+The major conclusions are that college enrollments can be improved if schools focus on improving their student attendance metrics. 
+
+A school's type does impact outcomes of performance metrics of a student. However many times these performance metrics can be related to more access to resources and budget due to the school's residing in wealthier neighborhoods.
+
+The high school education can influence the future for many students in Chicago. However, it is very clear that the Chicago Public School has to find way to replicate and reproduce methods used in high performing schools across all school types. The percent of college enrollment should not rely on the type of school a student attends. 
+
+With a greater understanding on what variables help students graduate and attend college, an increase in budgets for Chicago Public Schools can be further justified.
+
+## References
+CPS, (2025). Chicago Public Schools 2024 Report. [Chicago Public Schools Data Set Description](https://data.cityofchicago.org/Education/Chicago-Public-Schools-School-Progress-Reports-SY2/twrw-chuq/about_data).
+
+Chicago, C. of. (2025, January 23). ACS 5 year data by Community Area: City of Chicago: Data Portal. 
+[Chicago Demographic Data](https://data.cityofchicago.org/Community-Economic-Development/ACS-5-Year-Data-by-Community-Area/t68z-cikk/about_data).

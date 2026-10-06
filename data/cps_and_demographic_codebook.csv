@@ -1,0 +1,73 @@
+variables,desciption
+year,"character, year of reported data"
+school_id,"double, unique id for each school"
+short_name,"character, shorten name of school"
+long_name,"character, official name of school"
+school_type,"character, type of school with 14 options including: Charter, Contract, Citywide-Option, 
+    Career academy, Selective enrollment, Neighborhood, Magnet, Special Education, Military academy, 
+    Regional gifted center, Classical, Small, NA, and Virtual"
+primary_category,"character, school education level with 3 options HS (high school), MS (middle school), and ES (elementary school).
+address: character, school's address"
+address,"address: character, school's address"
+city,"character, school's city"
+state,"character, school's state"
+zip,"double, school's zip code"
+phone,"double, school's phone number without any punctuation"
+cps_school_profile,"character, school's profile on cps website"
+website,"character, school's personal website"
+progress_report_year,"double, year of report, which for this data set is 2024"
+student_attainment_rating,"character, Student Attainment measures how well the school performed 
+                 on standardized tests at a single point in time. This school's score is based on 
+attainment relative to the combined College Readiness Benchmark scores, set by College Board."
+culture_climate_rating,"character, Results are based on student and teacher responses to 
+             the My Voice, My School 5Essentials survey."
+school_survey_student_response_rate_pct,"double, percent of students who responded to the survey"
+school_survey_teacher_response_rate_pct,"double, percent of teacher who responded to the survey"
+creative_school_certification,"character, the school's rating in the arts with five options based on whether it meets the goals and priorities outlined in the CPS Arts Education Plan, 
+  including Staffing & Instruction, Partnerships, Community & Culture, and Budget 
+  & Planning."
+state_school_report_card_url,"character, url to the school's report card administred by cps, (not all links work)"
+mobility_rate_pct,"double, percent based on the number of times students enroll in or leave a school 
+             during the school year. Students who left more than once were counted multiple times."
+chronic_truancy_pct,"double, percentage of students with low attendance over extended periods of time. A chronic truant student is one who misses 5 percent of 
+school days within an academic year without a valid excuse. That’s nine days of 
+an average 180-day school year."
+supportive_school_award,"character, states weather the school has put in place 
+systems and structures to support social and emotional learning (SEL). 
+This may include SEL action plans, ongoing training for teachers and staff, 
+partnerships with community organizations, time for SEL in the master schedule, 
+and/or targeted and intensive SEL services."
+school_latitude,"double, school's latitude"
+school_longitude,"double, school's longitude"
+sat_grade_11_score_school_avg,"double, average sat score of grade 11 students with the average sat score across cps being 933."
+suspensions_per_100_students,"school's proportion of student suspended for every 100 students, with 4.2 as cps average."
+misconducts_to_suspensions,"double, school's proportion of misconducts reported to number of suspensions, with 10.8 as cps average. 
+This shows how often a misconduct may lead to a suspension "
+average_length_suspension,"double, average length of one suspension in days for each school, 
+with 2.0 as cps average."
+student_attendance,"double, average student attendance out of 100, with 88.3 as cps average."
+teacher_attendance,"double, average teacher attendance out of 100, with 94 as cps average."
+one_year_dropout_rate,"double, Dropouts include students in grades 9-12 whose 
+names have been removed from the district-housed roster for any reason other 
+than death, extended illness, graduation/completion of a program of study, 
+transfer to another public/private school or expulsion, with 5.3 as cps average."
+freshmen_on_track_school_pct,"double, percent of freshman on-track, 
+with average 88.7 cps students on track in 2022 and an average of 88.8 cps 
+students on track in 2023. A student is on-track if they earn at least five 
+full-year course credits and no more than one semester F in a core course in 
+their first year of high school"
+graduation_4_year_school_pct,"double, percent of students who graduated in four year, with 
+with 82.9 as cps average in 2022 and 84 as cps average in 2023."
+graduation_5_year_school_pct,"double, percent of students who graduate within
+five years of the start of their freshman year, with 84 as cps average in 2022 
+and 85.6 as cps average in 2023."
+college_enrollment_school_pct,"double, measures the percentage of students graduating 
+from CPS in the previous year who enrolled in a 2-year or 4-year college in the 
+fall or spring after graduation from high school, with 61.8 as cps average in 2022 
+and 65.2 as cps average in 2023."
+college_persistence_school_pct,"double, measures the percentage of students 
+enrolled in college in the fall or spring after graduation from high school 
+that remain enrolled in college the following fall or spring, with 73.4 as cps average in 2022 
+and 71.2 as cps average in 2023."
+income_level,"character, most promenient income level of the zip code the school resides in."
+income_population,"double, number of population in the zipcode who fall within themost promenient income level of the zip code"

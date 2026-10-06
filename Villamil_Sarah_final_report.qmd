@@ -1,0 +1,458 @@
+---
+title: "Chiago Public Schools College Enrollement and School Type Analysis"
+subtitle: |
+  | Final Project 
+  | Data Science 1 with R (STAT 301-1)
+author: "Sarah Villamil"
+pagetitle: "Final Report Sarah Villamil"
+date: "12/10/2025"
+
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    embed-resources: true
+    link-external-newwindow: true
+
+execute:
+  warning: false
+
+from: markdown+emoji
+reference-location: margin
+citation-location: margin
+---
+::: {.callout-tip icon=false}
+
+## Github Repo Link
+
+[My Git Hub Link](https://github.com/stat301-1-2025-fall/final-project-1-sarahvillamil)
+
+:::
+
+```{r}
+#| label: load-data
+#| results: hide
+#| echo: FALSE
+
+# libraries
+library(tidyverse)
+library(here)
+library(naniar)
+
+# datasets
+cps_untidy <- read_csv(here("data/raw/Chicago_public_schools.csv"))
+chicago_community_data <- read_csv(here("data/raw/Chicago_Demographic_data.csv")) 
+zip_joined <- read_rds(here("data/cps_and_demographic_cleaned.rds"))
+```
+
+## Introduction 
+
+In this report, I analyzed the [Chicago Public Schools Data](https://data.cityofchicago.org/Education/Chicago-Public-Schools-School-Progress-Reports-SY2/twrw-chuq/about_data)
+sourced from [City of Chicago Website](https://www.cps.edu/). This data set is a 2024 school progress report ratings for all Chicago Public Schools, based on 2022-2023 data. Given that the Chicago demographic data is from 2023, only the Chicago Public Schools 2023 data was explored in this report. For further analysis, I joined this dataset with the [Chicago Demographic Data](https://data.cityofchicago.org/Community-Economic-Development/ACS-5-Year-Data-by-Community-Area/t68z-cikk/data_preview) sourced from the [City of Chicago Data Portal](https://data.cityofchicago.org/). Both of these datasets were first accessed in October 24, 2025. 
+
+I chose to explore these data sets because I wanted to learn more about how college enrollment percents differ based on school types and demographic data. Based on my initial exploration, selective enrollment schools had high college enrollment and graduation rates and I am interested to see what other relations and associations can be drawn from school type. How accessible are these college preparation programs within these selective enrollment schools to the greater Chicago community? It should be noted that throughout this report there exists a notion that college is the desired result/measure of success out of high school which may not true for every student or school. How does a school location and corresponding demographics in Chicago affect their college enrollment rate? What variables such a student attendance, college persistence rate, and graduation rates could schools target to improve college enrollments. I believe that more research in this area is needed to emphasize the importance of certain programs to encourage the increase in budgets for Chicago Public Schools. 
+
+Research Question 1: What variables could schools target to improve college enrollment rates? 
+
+Research Question 2: How can a school type affect a student's post-high school outcomes? 
+
+## Data Overview & Quality 
+The Chicago Public School's data, consists of six-hundred-forty-nine schools spanning from elementary to high schools. There are 183 columns with 649 observations. The variables include datatypes from numerical such as school_id, zip code, student_attendance rates, and college enrollment data to categorical such as the school's address, school's safety score, and it's name. There are 121 categorical variables and 62 numerical variables. This data set was last updated on December 9th, 2025. Each year, a new dataset is released by the City of Chicago. The data provided by the Chicago Public Schools and by Ted Canji^[Web Production Manager at Chicago Public Schools]. 
+
+The Chicago Community Data provides 2023 demographic and income data based on Chicago's community areas as per the data collected by the [American Community Survey Data](https://www.census.gov/programs-surveys/acs/data.html). There are 30 columns with 77 observations. The variables include two categorical and 28 numerical with demographics such as income level, age, race, and ethnicity. Further description of this data set can be found on the [Chicago Data Portal](https://data.cityofchicago.org/Community-Economic-Development/ACS-5-Year-Data-by-Community-Area/t68z-cikk/data_preview). This dataset had zero missingness across all variables.  It should be noted that age ranges that were intially separated by gender in the dataset were combined as gender is not a demographic to be explored in my analysis. This dataset was last updated on January 23, 2025. This dataset was further joined with Chicago neighborhood and zipcode data provided by Professor Sass. 
+
+When these datasets were joined the new dataset which is used for this report had 39 columns with 1298 observations. Of these, 17 were categorical variables and 22 were numeric variables.
+
+In @fig-missingness-cps, the missingness of the joined dataset can be seen.
+A lot of this missingness is due to the inconsistent metrics of data collection across all schools. Many variables had no distinct value across all observations and were removed due to their lack of insight to the analysis. Another inefficiency in data collection was that averages across all Chicago public schools were stored within the data set, but if graphed these variables would have a zero slope. These variables are reflected in the code book but removed for the analysis.
+
+```{r}
+#| label: fig-missingness-cps
+#| fig-cap: "General Missingness in Chicago Public School Data"
+#| echo: FALSE
+missingness_overall <- zip_joined|>
+  gg_miss_var() + 
+  labs(
+    title = "General Missingness in Chicago Public School's Data",
+    subtitle = "Collected by City of Chicago"
+    )
+    
+ggsave("plots/missingness_overall.png", missingness_overall)
+
+missingness_overall
+```
+
+After tidying, pivoting, and intentionally choosing the variables to explore, I was able to reduce missingness especially for the college enrollment variable. I focused on high school's in the dataset as elementary and middle schools are unlikely to have data on their college enrollment, which could have caused null values. This change in null values is refected in @tbl-missingness-cps. It should be noted that some high school's had null values for college enrollment percent. This may be due to inconsistent data collection or focus on non-college post high school options. However, as seen in @tbl-missingness-cps, the percent missing for college enrollment percent was reduced to less than seven percent missing. 
+```{r}
+#| label: tbl-missingness-cps
+#| tbl-cap: "Top Missingness in Chicago Public High School Data"
+#| echo: FALSE
+missingness_top <- zip_joined |> 
+filter(primary_category == "HS")|>
+miss_var_summary() |>
+  filter(n_miss > 20)
+
+knitr::kable(missingness_top, caption = "Missingness of
+             Variables in Chicago Public High School Data")
+```
+## Explorations 
+
+### Research Question 1 
+What variables could schools target to improve college enrollment rates?
+
+#### Univariate Analysis of College Enrollment
+First an uni-variate exploration of the college enrollment rate variable. @fig-college-enrollment-rate-cps shows that college enrollments percent vary. However, there is a mean peak in the distribution at around 75% of college enrollment rates.
+
+```{r}
+#| label: fig-college-enrollment-rate-cps
+#| fig-cap: "Distribution of College Enrollment Rates for Chicago Public High Schools"
+#| echo: FALSE
+distribution_college_enroll <- zip_joined |> 
+  ggplot(aes(x = college_enrollment_school_pct)) +
+  geom_histogram(fill = "darkcyan", color = "darkslategray") +
+  labs(
+    title = "Distribution of College Enrollment Rate", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "College Enrollment Rate", 
+    y = "Count"
+  ) +
+  theme_bw() 
+  
+ggsave("plots/distribution_college_enroll.png", distribution_college_enroll)
+
+distribution_college_enroll
+```
+
+In @tbl-top-enrollment-cps, I explored the high schools that had the top college enrollment rates. I also then explored the ten high schools with the lowest college enrollment rates in @tbl-low-enrollment-cps. With the highest college enrollment rate at 95.1% and the lowest at 32.1%. 
+
+```{r}
+#| label: tbl-top-enrollment-cps
+#| tbl-cap: "Top 10 Chicago Public Schools with Highest College Enrollment Rate"
+#| echo: FALSE
+
+college_enrollment_top <- zip_joined |> 
+  drop_na() |> 
+  filter(primary_category == "HS", year == "2023") |>
+  arrange(desc(college_enrollment_school_pct)) |> 
+  select(short_name, school_type, college_enrollment_school_pct) |>
+  slice_head(n = 10)
+
+knitr::kable(college_enrollment_top, caption = "Top 10 Chicago Public Schools with Highest College Enrollment Rate")
+```
+
+```{r}
+#| label: tbl-low-enrollment-cps
+#| tbl-cap: "Bottom 10 Chicago Public Schools with Lowest College Enrollment Rate"
+#| echo: FALSE
+
+college_enrollment_top <- zip_joined |> 
+  drop_na() |> 
+  filter(primary_category == "HS", year == "2023") |>
+  arrange(desc(college_enrollment_school_pct)) |> 
+  select(short_name, school_type, college_enrollment_school_pct) |>
+  slice_tail(n = 10)
+
+knitr::kable(college_enrollment_top, caption = "Bottom 10 Chicago Public Schools with Lowest College Enrollment Rate")
+```
+
+As it can be seen in @tbl-top-enrollment-cps, the schools with the highest college enrollment rates tended to be selective enrollment schools. While as seen in @tbl-low-enrollment-cps, the lowest college enrollment rates  tended to be neighborhood schools. 
+
+#### Bivariate Analysis of College Enrollment
+I then decided to explore how college enrollment rates were affected by school type in @fig-enrollment-by-school-cps. It confirms that selective enrollment schools are the type with the highest college enrollment rates but shows that special education and citywide option school types have the lowest college enrollment rates. This shows that there is another factor affecting college enrollment rates to differ among neighborhood schools that isn't just school type.
+
+```{r}
+#| label: fig-enrollment-by-school-cps
+#| fig-cap: College Enrollment Percents by School Type for Chicago Public High Schools"
+#| echo: FALSE
+
+college_enrollment_by_school_type <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  summarize(avg_college_enrollment = mean(college_enrollment_school_pct, na.rm = TRUE), .by = school_type) |> 
+  arrange(desc(avg_college_enrollment)) |>
+ggplot(aes(x = school_type, y = avg_college_enrollment)) +
+ geom_col(fill = "darkcyan", color = "darkslategray") + 
+  labs(
+    title = "Average Percent of College Enrollment by School Type", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "School Type", 
+    y = "Average Percent of College Enrollment"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/college_enrollment_by_school_type.png", college_enrollment_by_school_type)
+
+college_enrollment_by_school_type
+```
+
+Given that neighborhood schools are dependent on the zipcode and community area, demographic data could explain the difference amongst neighborhood schools. In @tbl-top-enrollment-by-top-income-level-cps, I explored how the prominent income level of the zip code in which the school resides could indicate the college enrollment rates.
+How does an area's income level affect the college enrollment rates? As seen in @tbl-top-enrollment-by-top-income-level-cps, the top schools for highest college enrollments percents reside in zipcodes were prominent average income level is above `$125,000` or between `$25,000` to `$49,999` income. When compared with @tbl-top-enrollment-cps, it shows that the selective enrollment schools are the ones who resign within the above `$125,000` range while the neighborhood schools are the ones that lie within the `$25,000` to `$49,999` range. 
+In @tbl-enrollment-by-bottom-income-level-cps shows the prominent income level of the zip codes of school's with the lowest college enrollment rates. This table shows more variation in the prominent income level as some schools are in the lowest income level while some are in the highest income level. 
+```{r}
+#| label: tbl-top-enrollment-by-top-income-level-cps
+#| tbl-cap: "Chicago Public Schools School Type in Order of Highest College Enrollment Rate"
+#| echo: FALSE
+college_enrollment_top <- zip_joined |> 
+  drop_na() |> 
+  filter(primary_category == "HS", year == "2023") |>
+  arrange(desc(college_enrollment_school_pct)) |> 
+  select(short_name, income_level, college_enrollment_school_pct) |>
+  slice_head(n = 10)
+
+knitr::kable(college_enrollment_top, caption = "Chicago Public Schools School Type in Order of Highest College Enrollment Rate")
+```
+
+```{r}
+#| label: tbl-enrollment-by-bottom-income-level-cps
+#| tbl-cap: "Chicago Public Schools School Type in Order of Lowest College Enrollment Rates"
+#| echo: FALSE
+
+college_enrollment_bottom <- zip_joined |> 
+  drop_na() |> 
+  filter(primary_category == "HS", year == "2023") |>
+  arrange(college_enrollment_school_pct) |> 
+  select(short_name, income_level, college_enrollment_school_pct) |>
+  slice_head(n = 10)
+
+knitr::kable(college_enrollment_bottom, caption = "Chicago Public Schools School Type in Order of Lowest College Enrollment Rates")
+```
+
+
+However, overall, there is an association with the zipcode's income level and the college enrollment rate As shown in @fig-enrollment-by-income-cps, as the income level decreases, the average percent of college enrollment decreases as well. 
+```{r}
+#| label: fig-enrollment-by-income-cps
+#| fig-cap: "College Enrollment Rates by Income Level for Chicago Public High Schools"
+#| echo: FALSE
+
+college_enrollment_by_income_level <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  summarize(avg_college_enrollment = mean(college_enrollment_school_pct, na.rm = TRUE), .by = income_level) |> 
+  arrange(avg_college_enrollment) |>
+ggplot(aes(x = income_level, y = avg_college_enrollment)) +
+ geom_col(fill = "darkcyan", color = "darkslategray") + 
+  labs(
+    title = "Average Percent of College Enrollment by Income Level", 
+    subtitle = "Based on Chicago Public Schools 2023 Data and Chicago Demographic 2023 Data",
+    x = "Income Level", 
+    y = "Average Percent of College Enrollment"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+  
+ggsave("plots/college_enrollment_by_income_level.png", college_enrollment_by_income_level)
+
+college_enrollment_by_income_level
+```
+
+Now that I have explored how categorical variables relate to college enrollments percents, I will be exploring numerical variables in a correlation plot, @fig-cor-plot-cps
+
+```{r}
+#| label: fig-cor-plot-cps
+#| fig-cap: "Correlation Plot of Numeric Variables from Chicago Public Schools Data"
+#| echo: FALSE
+
+cps_numeric_only <- zip_joined |> 
+  select(is.numeric) |>  
+  select(where(~sd(., na.rm = TRUE) > 0)) |> 
+  select(-c(school_id, zip, phone, school_longitude, school_latitude, teacher_attendance, school_survey_teacher_response_rate_pct, school_survey_student_response_rate_pct, freshmen_on_track_school_pct)) |>
+  cor(use = "pairwise.complete.obs")
+
+correlation_plot_cps <- ggcorrplot::ggcorrplot(cps_numeric_only, lab = TRUE, digit = 1, 
+                       title = "Correlation Plot of CPS Data")
+                       
+ggsave("plots/correlation_plot_cps.png", correlation_plot_cps)
+correlation_plot_cps
+```
+
+The correlation plot shows which numeric variables have a strong association with the college enrollment rate. It shows that the variables with the strongest negative association are mobility rates percent, one year drop out rate, and chronic truancy percent. 
+The variables with the strongest positive association are student attendance, college persistence rate, and graduation rate in four and five years. 
+
+In my second research question I look how the positive relation between student attendance, college enrollment with college persistence rate, and graduation rate in four and five years can be related to the school's type. 
+
+### Research Question 2
+How can a school type affect a student's post-high school outcomes? 
+
+#### School Type Univariable Analysis
+According to the code book and @tbl-school-type-cps, there are 14 options of school types including: Charter, Contract, Citywide-Option, Career academy, Selective enrollment, Neighborhood, Magnet, Special Education, Military academy, Regional gifted center, Classical, Small, NA, and Virtual. 
+```{r}
+#| label: tbl-school-type-cps
+#| tbl-cap: "Count of School Types within the Chicago Public School"
+#| echo: FALSE
+
+cps_by_school_type <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  summarize(count = n(), .by = school_type) |> 
+  arrange(desc(count))
+
+knitr::kable(cps_by_school_type, caption = "Count of School Types within the Chicago Public Schools")
+```
+
+However, of these school types, only 10 have recorded data on college enrollment and graduation rates. From research question 1 with @fig-enrollment-by-school-cps we already know that selective enrollment schools have the highest average of college enrollment among students with special-education and citywide option schools at the bottom 
+
+It is very clear that school type can have an impact on college enrollment and I was curious how school type could further explain the difference in the other numeric variables related to college enrollment such as student attendance, college enrollment with college persistence rate, and graduation rate in four and five years, as well as SAT scores. 
+
+#### School Type Bivariate Analysis
+Looking at SAT scores, once again the difference among school types is consistent. @fig-sat-by-type-cps show that while most participating CPS high schools do well on the SAT, selective enrollment has the highest average SAT scores and city-wide option has the lowest average SAT scores 
+
+```{r}
+#| label: fig-sat-by-type-cps
+#| fig-cap: "Avg SAT Scores by School Type"
+#| echo: FALSE
+
+avg_sat_by_type_graph <- zip_joined |> 
+  filter(primary_category == "HS")|> 
+  summarize(mean_sat = mean(sat_grade_11_score_school_avg, na.rm = TRUE), .by = school_type) |>
+  ggplot(aes(x = school_type, y = mean_sat)) +
+  geom_col(fill = "darkcyan", color = "darkslategray") + 
+  labs(
+    title = "Average SAT Score by School Type", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "Type of School", 
+    y = "Average SAT Score"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/avg_sat_by_type_graph.png", avg_sat_by_type_graph)
+
+avg_sat_by_type_graph
+```
+
+The relation of school type to college persistence is shown in @fig-persistence-by-type. In this figure we see similar patterns as shown in college enrollment and SAT scores figures, however the relation between school type and college persistence is not as strong as college enrollment rates. Selective enrollment still has a much higher percent than other schools types. However, citywide option schools are closer in percent to other school types. 
+```{r}
+#| label: fig-persistence-by-type
+#| fig-cap: "Avg College Persistence by School Type Graph"
+#| echo: FALSE
+
+avg_college_persistence_by_type_graph <- zip_joined |> 
+  filter(primary_category == "HS")|> 
+  summarize(mean_college_persistence = mean(college_persistence_school_pct, na.rm = TRUE), .by = school_type) |>
+  ggplot(aes(x = school_type, y = mean_college_persistence)) +
+  geom_col(fill = "darkcyan", color = "darkslategray") + 
+  labs(
+    title = "Average Percent of College Persistence by School Type", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "Type of School", 
+    y = "Average Percent of College Persistence"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/avg_college_persistence_by_type_graph.png", avg_college_persistence_by_type_graph)
+avg_college_persistence_by_type_graph
+```
+
+
+### Multivariable Analysis
+In @fig-enrollment-vs-persistence-by-type, our explorations in research question 1 and research question 2 start to merge. The figure shows the positive relation between college enrollment and college persistence percent. The higher percent of college enrollment lends itself to a higher percent in college persistence. This confirms all the school type relationships explored above and goes further into the distribution of charter schools. As indicated by the orange points, charter school have a wider variation in college enrollment and college persistent rates. 
+```{r}
+#| label: fig-enrollment-vs-persistence-by-type
+#| fig-cap: "College Enrollments Vs College Persistence by School Type Graph"
+#| echo: FALSE
+
+enrollment_vs_persistence_by_type_graph <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  ggplot(aes(x = college_enrollment_school_pct, y = college_persistence_school_pct, color = school_type)) +
+  geom_point() +
+  labs(
+    title = "Relation of College Enrollment to College Persistence Rates by School Type", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "College Enrollment Percent", 
+    y = "College Persistence Percent", 
+    color = "School Type"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/enrollment_vs_persistence_by_type_graph.png", enrollment_vs_persistence_by_type_graph)
+enrollment_vs_persistence_by_type_graph
+```
+
+In @fig-enrollment-vs-4-grad-by-type, the relation between graduation rates within four years and college enrollments percents are compared. This supports the positive association the correlation plot showed above. However, this scatterplot gives more insight on how the graduation rate is distributed between school types. In @fig-enrollment-vs-4-grad-by-type, citywide option is very clearly at the lower end of the graph by itself. Meanwhile even though other schools linger towards the 50% and 75% graduation rate, across all other school types the graduation rates in four years in leaning more towards around 75% or greater. 
+
+```{r}
+#| label: fig-enrollment-vs-4-grad-by-type
+#| fig-cap: "College Enrollments Versus 4 Year Graduation Rates Graph"
+#| echo: FALSE
+four_year_vs_enrollment_by_type_graph <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  ggplot(aes(x = graduation_4_year_school_pct, y = college_enrollment_school_pct, color = school_type)) +
+  geom_point() +
+  labs(
+    title = "Relation of College Enrollment to 4 Year Graduation Rate", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "4 Year Graduation Rate", 
+    y = "College Enrollment Percent", 
+    color = "School Type"
+  ) +
+theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/four_year_vs_enrollment_by_type_graph.png", four_year_vs_enrollment_by_type_graph)
+four_year_vs_enrollment_by_type_graph
+```
+
+It should be noted that in the Chicago Public Schools dataset, there are two different variables between graduation rates in four years and graduation rates in five years. According to the codebook and Chicago Public Schools website, the five year graduation program was created as a way to further encourage graduation rates among students. In @fig-4-vs-5-grad-by-type, it is clear that schools that have a high five year graduation rate also have a strong four year graduation rate. We can see that for small and neighborhood schools, the five year graduation rate option does not really affect or increase the four year graduation rate.  
+
+```{r}
+#| label: fig-4-vs-5-grad-by-type
+#| fig-cap: "5 Year Vs 4 Year Graduation Rate Graph"
+#| echo: FALSE
+five_year_vs_four_year_by_type_graph <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  ggplot(aes(x = graduation_5_year_school_pct, y = graduation_4_year_school_pct, color = school_type)) +
+  geom_point() +
+  labs(
+    title = "Relation of 4 Year Graduation Rate to 5 Year Graduation Rate by School Type", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "5 Year Graduation Rate", 
+    y = "4 Year Graduation Rate", 
+    color = "School Type"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/five_year_vs_four_year_by_type_graph.png", five_year_vs_four_year_by_type_graph)
+five_year_vs_four_year_by_type_graph
+```
+
+In @fig-attendance-by-type, the relation between student attendance and college enrollment is explored. It is clear that student attendance does not have the strongest relationship to college enrollment compared to graduation rates. However, this graph does show more information about the school types. Selective enrollment schools have high attendance rates among students which relates to their high college enrollment rates. Meanwhile, charter schools are scattered throughout the graph with varying student attendance and a lower college enrollment. This relation could explain why charter schools were on the lower end of the college persistence percent. If student attendance relates and affect the college enrollments of character students, then the less students enrolled in college, the less persist in college. 
+
+```{r}
+#| label: fig-attendance-by-type
+#| fig-cap: "Student Attendance by School Type Graph"
+#| echo: FALSE
+attendance_by_type_graph <- zip_joined |> 
+  filter(primary_category == "HS") |>
+  ggplot(aes(x = student_attendance, y = college_enrollment_school_pct, color = school_type)) +
+  geom_point() +
+  labs(
+    title = "Relation of College Enrollment to Student Attendance", 
+    subtitle = "Based on Chicago Public Schools 2023 Data",
+    x = "Student Attendance", 
+    y = "College Enrollment", 
+    color = "School Type"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) 
+
+ggsave("plots/attendance_by_type_graph.png", attendance_by_type_graph)
+attendance_by_type_graph
+```
+## Conclusions
+From this data analysis, I discovered that college enrollment can be positively and negatively impacted by many variables. This is encouraging to schools as this means there are multiple ways they can further improve their college enrollment rates. If a school wants to improve college enrollments rates, they can focus on tackling student attendance. It was clear that there is a positive association between students attending class and college enrollment rates. Even though college persistence rates and graduation rates in four and five years were also strongly associated to college enrollments, it is a less manageable variable for schools to control on a daily basis. Student attendance is an manageable, and achievable variable to for schools to target that could show impactful results. 
+
+Schools can also choose to decrease the variables that have strong negative association with college enrollments. As mentioned in the code book, mobility rates measure the number times a student enrolls or leaves a school. Another was variable negatively association with college enrollments was chronic truancy rates which measures percentage of students who miss nine or more days of an average 180-day school year. While mobility rates many times are outside of a school's control, chronic truancy rates once again relate to student attendance. If a school wishes to increase their attendance among students they could further compartmentalize it to first decrease the percent of chronic truancy among students. The one year drop out rate is also a variable that negatively affects the college enrollment rates. A one year drop out rate is a percent that measures any student who drops from the school's roster for any reason. Once again, this variable many times is outside of a school's control but still puts an emphasis on the importance of school attendance and persistence in attendance.
+
+It is very clear that among school types, selective enrollment schools is keeping students in school and performing well. While many of these factors may be related to exterior forces as explored in the income levels. I am curious and hopeful for Chicago Public Schools to be able to look at methods used by selective enrollments schools and apply it to other schools. While some of these practices may be possible due to a larger budget, I am curious to further research what kind of practices could exist that are cost efficient and reproducible. What are selective enrollment schools doing to keep their student attendance up and how can other schools replicate this? 
+
+When it comes to school types, it is clear that if I was a parent of a child who I wanted to have a better percent at college enrollment and performance, I would try to enroll them in a selective enrollment school. Across all of the graphs and tables, selective enrollments maintained at the top with the highest college enrollment rates, highest average SAT scores, highest college persistence percent, high student attendance rates, and high graduation rates. There could be a further connection drawn between the income levels of the neighborhood in which selective enrollment schools preside. Given that they tended to be in the highest income level, it could explain justify its high results due to a bigger budget and availability to college preparation resources. Even though, selective enrollments schools are accepted based on applications, it should be noted that proximity to a school makes selective enrollment schools more accessible to higher income families.
+
+Overall, I was surprised to find out how many different types of schools exist in the CPS system. While many of these school may not measure their success on college enrollment, it is still interesting to see what determining variables could be associated with it. I was surprised on the variety of results across different school types. It is clear that schools such as charter and neighborhood schools did not have a consistent type of performance across the variables explored like selective enrollment schools. I am curious to further explore what is the differentiating feature within a school type like charter or neighborhood schools if it is not school type. Is it location, income, funding or are there other variables affecting it? 
+
+## References
+CPS, (2025). Chicago Public Schools 2024 Report. [Chicago Public Schools Data Set Description](https://data.cityofchicago.org/Education/Chicago-Public-Schools-School-Progress-Reports-SY2/twrw-chuq/about_data).
+
+Chicago, C. of. (2025, January 23). ACS 5 year data by Community Area: City of Chicago: Data Portal. 
+[Chicago Demographic Data](https://data.cityofchicago.org/Community-Economic-Development/ACS-5-Year-Data-by-Community-Area/t68z-cikk/about_data).
