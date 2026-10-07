@@ -1,8 +1,8 @@
 
 ## Repo Organization 
 ### Sub-directories 
--['data/'](data): contains all data for this project.
--['plots/'](plot): contains all figures for this project (excluding tables)
+['data/'](data): contains all data for this project.
+['plots/'](plot): contains all figures for this project (excluding tables)
 
 ### R Scripts
 -   '0a_spatial_key.R': notated work on joining of Chicago Demographic Data set 
