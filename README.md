@@ -2,6 +2,7 @@
 ## Repo Organization 
 ### Sub-directories 
 ['data/'](data): contains all data for this project.
+
 ['plots/'](plot): contains all figures for this project (excluding tables)
 
 ### R Scripts
